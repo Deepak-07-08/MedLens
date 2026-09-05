@@ -1,0 +1,27 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: medlens
+      POSTGRES_PASSWORD: medlens
+      POSTGRES_DB: medlens
+    ports: ["5432:5432"]
+    volumes: [medlens_pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medlens"]
+      interval: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://medlens:medlens@db:5432/medlens
+    ports: ["8000:8000"]
+    volumes: ["./backend:/app"]
+    depends_on:
+      db: {condition: service_healthy}
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  medlens_pgdata:
